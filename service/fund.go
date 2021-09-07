@@ -5,37 +5,37 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func GetFundInfo(fundCode string) []Fund {
-	dsn := "root:123456@tcp(localhost:3306)/fund?charset=utf8mb4&parseTime=True&loc=Local"
-	db, _ := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, _ := getConn()
 	db.AutoMigrate(&Fund{})
 	db.AutoMigrate(&HoldStock{})
 	var funds []Fund
 	var count int64
 	db.Debug().Where(&Fund{Code: fundCode}).Find(&funds).Count(&count)
 	if count == 0 {
-		fundPosition := getFundPosition("https://api.doctorxiong.club/v1/fund/position?code=" + fundCode)
-		savePosition(fundPosition, fundCode)
+		SavePosition(fundCode)
 	}
 	db.Debug().Where(&Fund{Code: fundCode}).Find(&funds)
 	return funds
 }
 
-func savePosition(pos Position, fundCode string) {
-	dsn := "root:123456@tcp(localhost:3306)/fund?charset=utf8mb4&parseTime=True&loc=Local"
-	db, _ := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func SavePosition(fundCode string) int {
+	pos := getFundPosition("https://api.doctorxiong.club/v1/fund/position?code=" + fundCode)
+	db, _ := getConn()
 	var fund = Fund{Name: pos.Data.Title, Code: fundCode, Bond: pos.Data.Bond, Cash: pos.Data.Cash, Stock: pos.Data.Stock, Title: pos.Data.Title, Total: pos.Data.Total}
 	db.Debug().Create(&fund)
 	for _, v := range pos.Data.StockList {
 		var holdStock = HoldStock{FundCode: fundCode, StockCode: v[0], Name: v[1], Precent: v[2], Hold: v[3], HoldAmount: v[4]}
 		db.Debug().Create(&holdStock)
 	}
+	var id int
+	db.Debug().Select("ID").Where(&Fund{Code: fundCode}).First(&id)
+	return id
 }
 
 func getFundPosition(url string) Position {
@@ -48,10 +48,17 @@ func getFundPosition(url string) Position {
 }
 
 func CheckFundExist(fundCode string) int {
-	dsn := "root:123456@tcp(localhost:3306)/fund?charset=utf8mb4&parseTime=True&loc=Local"
-	db, _ := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, _ := getConn()
+
 	var fund Fund
-	db.Debug().Where(&Fund{Code: fundCode}).Find(&fund)
+	db.Debug().Where(&Fund{Code: fundCode}).First(&fund)
+	return int(fund.ID)
+}
+
+func getFundId(fundCode string) int {
+	db, _ := getConn()
+	var fund Fund
+	db.Debug().Where(&Fund{Code: fundCode}).First(&fund)
 	return int(fund.ID)
 }
 

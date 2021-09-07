@@ -9,36 +9,49 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-type UserInfo struct {
+type UserFund struct {
 	User   string `form:"User" json:"User" xml:"User"  binding:"required"`
 	Fund   string `form:"Fund" json:"Fund" xml:"Fund" binding:"required"`
 	Amount string `form:"Amount" json:"Amount" xml:"Amount" binding:"-"`
 }
 
+type UserInfo struct {
+	User string `form:"User" json:"User" xml:"User"  binding:"required"`
+	Desc string `form:"Desc" json:"Desc" xml:"Desc" binding:"required"`
+}
+
 func main() {
 	router := gin.Default()
 	// 获取用户基金列表
-	router.GET("/getUserFund/:userid", func(c *gin.Context) {
-		userid := c.Param("userid")
-		c.String(http.StatusOK, se.GetUserFund(userid))
+	router.POST("/addUser", func(c *gin.Context) {
+		var json UserInfo
+		if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, se.AddUser(json.User, json.Desc))
+	})
+	router.GET("/getUserFund/:username", func(c *gin.Context) {
+		username := c.Param("username")
+		c.JSON(http.StatusOK, se.GetUserFund(username))
 	})
 	// 为一名用户添加基金
 	router.POST("/addUserFund", func(c *gin.Context) {
-		var json UserInfo
+		var json UserFund
 		if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		c.String(http.StatusOK, se.AddUserFund(json.User, json.Fund))
+		c.JSON(http.StatusOK, se.AddUserFund(json.User, json.Fund))
 	})
 	// 为一名用户删除基金
 	router.POST("/deleteUserFund", func(c *gin.Context) {
-		var json UserInfo
+		var json UserFund
 		if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		c.String(http.StatusOK, se.DeleteUserFund(json.User, json.Fund))
+		c.JSON(http.StatusOK, se.DeleteUserFund(json.User, json.Fund))
 	})
 	// 获取基金详情
 	router.GET("/getFundInfo/:fund", func(c *gin.Context) {
