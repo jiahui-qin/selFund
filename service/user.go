@@ -22,12 +22,21 @@ func AddUser(name, desc string) string {
 	return fmt.Sprintf("%d", res.Error)
 }
 
-func GetUserFund(username string) []UserFund {
+func GetUserFund(username string) []Fund {
 	userid := getUserId(username)
 	var userFunds []UserFund
 	sqldb, _ := getConn()
-	sqldb.Where(&UserFund{UserId: userid}).Find(&userFunds)
-	return userFunds
+	sqldb.Debug().Where(&UserFund{UserId: userid}).Find(&userFunds)
+	var fundIds []int
+	for _, uf := range userFunds {
+		fundIds = append(fundIds, uf.FundId)
+	}
+	var funds []Fund
+	if fundIds != nil {
+		sqldb.Debug().Find(&funds, fundIds)
+		return funds
+	}
+	return nil
 }
 
 func AddUserFund(user string, fund string) string {
@@ -37,7 +46,15 @@ func AddUserFund(user string, fund string) string {
 		fundid = SavePosition(fund)
 	}
 	sqldb, _ := getConn()
-	sqldb.Debug().Create(&UserFund{UserId: userid, FundId: fundid})
+	sqldb.AutoMigrate(&UserFund{})
+	var userCount int64
+	sqldb.Debug().Find(&UserFund{UserId: userid, FundId: fundid}).Count(&userCount)
+	if userCount == 0 {
+		sqldb.Debug().Create(&UserFund{UserId: userid, FundId: fundid})
+	}
+	// Clauses(clause.OnConflict{
+	// 	Columns:   []clause.Column{{Name: "user_id"}, {Name: "fund_id"}},
+	// 	DoNothing: true})
 	return "ok"
 }
 
@@ -57,8 +74,8 @@ func DeleteUserFund(username string, fundid string) string {
 
 type UserFund struct {
 	gorm.Model
-	UserId int `gorm:"column:user_id;not null" db:"user_id" json:"user_id" form:"user_id"`
-	FundId int `gorm:"column:fund_id;not null " db:"fund_id" json:"fund_id" form:"fund_id"`
+	UserId int `gorm:"column:user_id;not null;primaryKey" db:"user_id" json:"user_id" form:"user_id"`
+	FundId int `gorm:"column:fund_id;not null;primaryKey" db:"fund_id" json:"fund_id" form:"fund_id"`
 }
 
 type User struct {
