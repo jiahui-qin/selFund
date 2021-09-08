@@ -22,7 +22,7 @@ type UserInfo struct {
 
 func main() {
 	router := gin.Default()
-	// 获取用户基金列表
+
 	router.POST("/addUser", func(c *gin.Context) {
 		var json UserInfo
 		if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
@@ -31,9 +31,16 @@ func main() {
 		}
 		c.JSON(http.StatusOK, se.AddUser(json.User, json.Desc))
 	})
+	// 获取用户基金列表
 	router.GET("/getUserFund/:username", func(c *gin.Context) {
 		username := c.Param("username")
 		c.JSON(http.StatusOK, se.GetUserFund(username))
+	})
+
+	// 获取用户基金统计
+	router.GET("/checkMyRepeatStock/:username", func(c *gin.Context) {
+		username := c.Param("username")
+		c.JSON(http.StatusOK, se.CheckMyRepeatStock(username))
 	})
 	// 为一名用户添加基金
 	router.POST("/addUserFund", func(c *gin.Context) {

@@ -39,6 +39,31 @@ func GetUserFund(username string) []Fund {
 	return nil
 }
 
+func CheckMyRepeatStock(user string) map[string]*UserStock {
+	funds := GetUserFund(user)
+	sqldb, _ := getConn()
+	holdStockMap := make(map[string]*UserStock)
+
+	for _, fund := range funds {
+		var holdStocks []HoldStock
+		sqldb.Debug().Where(&HoldStock{FundCode: fund.Code}).Find(&holdStocks)
+		for _, holdStock := range holdStocks {
+			userStock, exist := holdStockMap[holdStock.Name]
+			if exist {
+				holdStockMap[holdStock.Name].HoldFundCount = userStock.HoldFundCount + 1
+			} else {
+				holdStockMap[holdStock.Name] = &UserStock{HoldStock: holdStock, HoldFundCount: 1}
+			}
+		}
+	}
+	return holdStockMap
+}
+
+type UserStock struct {
+	HoldStock
+	HoldFundCount int `json:"holdFundcCount"`
+}
+
 func AddUserFund(user string, fund string) string {
 	fundid := CheckFundExist(fund)
 	userid := getUserId(user)
@@ -52,9 +77,6 @@ func AddUserFund(user string, fund string) string {
 	if userCount == 0 {
 		sqldb.Debug().Create(&UserFund{UserId: userid, FundId: fundid})
 	}
-	// Clauses(clause.OnConflict{
-	// 	Columns:   []clause.Column{{Name: "user_id"}, {Name: "fund_id"}},
-	// 	DoNothing: true})
 	return "ok"
 }
 
