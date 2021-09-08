@@ -1,4 +1,4 @@
-package service
+package tool
 
 import (
 	"database/sql"
@@ -17,7 +17,7 @@ type Database struct {
 
 var DatabaseConfig = new(Database) //设置全局的引用型指针变量
 
-func getConn() (*gorm.DB, error) {
+func GetConn() (*gorm.DB, error) {
 	dsn := "root:123456@tcp(localhost:3306)/fund?charset=utf8mb4&parseTime=True&loc=Local"
 	db, error := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	sqlDB, _ := db.DB()

@@ -2,14 +2,19 @@ package service
 
 import (
 	"fmt"
+	tool "selFund/tool"
 	"strconv"
 
 	"gorm.io/gorm"
 )
 
-func AddUser(name, desc string) string {
-	db, _ := getConn()
+func init() {
+	db, _ := tool.GetConn()
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&UserFund{})
+}
+func AddUser(name, desc string) string {
+	db, _ := tool.GetConn()
 	user := &User{Name: name, Desc: desc}
 	res := db.Debug().Create(user)
 	if res.Error == nil {
@@ -25,7 +30,7 @@ func AddUser(name, desc string) string {
 func GetUserFund(username string) []Fund {
 	userid := getUserId(username)
 	var userFunds []UserFund
-	sqldb, _ := getConn()
+	sqldb, _ := tool.GetConn()
 	sqldb.Debug().Where(&UserFund{UserId: userid}).Find(&userFunds)
 	var fundIds []int
 	for _, uf := range userFunds {
@@ -41,7 +46,7 @@ func GetUserFund(username string) []Fund {
 
 func CheckMyRepeatStock(user string) map[string]*UserStock {
 	funds := GetUserFund(user)
-	sqldb, _ := getConn()
+	sqldb, _ := tool.GetConn()
 	holdStockMap := make(map[string]*UserStock)
 
 	for _, fund := range funds {
@@ -65,13 +70,13 @@ type UserStock struct {
 }
 
 func AddUserFund(user string, fund string) string {
-	fundid := CheckFundExist(fund)
-	userid := getUserId(user)
-	if fundid == 0 {
-		fundid = SavePosition(fund)
+	fundExist := CheckFundExist(fund)
+	if !fundExist {
+		InsertFund(fund)
 	}
-	sqldb, _ := getConn()
-	sqldb.AutoMigrate(&UserFund{})
+	userid := getUserId(user)
+	fundid := getFundId(fund)
+	sqldb, _ := tool.GetConn()
 	var userCount int64
 	sqldb.Debug().Find(&UserFund{UserId: userid, FundId: fundid}).Count(&userCount)
 	if userCount == 0 {
@@ -81,15 +86,14 @@ func AddUserFund(user string, fund string) string {
 }
 
 func getUserId(name string) int {
-
 	var user User
-	sqldb, _ := getConn()
+	sqldb, _ := tool.GetConn()
 	sqldb.Debug().Where(&User{Name: name}).First(&user)
 	return int(user.ID)
 }
 
 func DeleteUserFund(username string, fundid string) string {
-	sqldb, _ := getConn()
+	sqldb, _ := tool.GetConn()
 	sqldb.Debug().Where("user_id = ? AND fund_id = ?", getUserId(username), getFundId(fundid)).Delete(&UserFund{})
 	return "ok"
 }
