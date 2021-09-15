@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	tool "selFund/tool"
-	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -13,7 +12,8 @@ func init() {
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&UserFund{})
 }
-func AddUser(name, desc string) string {
+
+func AddUser(name, desc string) (User, error) {
 	db, _ := tool.GetConn()
 	user := &User{Name: name, Desc: desc}
 	res := db.Debug().Create(user)
@@ -21,16 +21,19 @@ func AddUser(name, desc string) string {
 		var user_in User
 		db.Debug().Where(user).First(&user_in)
 		fmt.Println(user_in)
-		return strconv.Itoa(int(user_in.ID))
+		return user_in, nil
 	}
 	fmt.Println(res.Error)
-	return fmt.Sprintf("%d", res.Error)
+	return User{}, res.Error
 }
 
-func GetUserFund(username string) []Fund {
+func GetUserFund(username string) ([]Fund, error) {
 	userid := getUserId(username)
 	var userFunds []UserFund
-	sqldb, _ := tool.GetConn()
+	sqldb, err := tool.GetConn()
+	if err != nil {
+		return nil, err
+	}
 	sqldb.Debug().Where(&UserFund{UserId: userid}).Find(&userFunds)
 	var fundIds []int
 	for _, uf := range userFunds {
@@ -39,13 +42,16 @@ func GetUserFund(username string) []Fund {
 	var funds []Fund
 	if fundIds != nil {
 		sqldb.Debug().Find(&funds, fundIds)
-		return funds
+		return funds, nil
 	}
-	return nil
+	return nil, nil
 }
 
-func CheckMyRepeatStock(user string) map[string]*UserStock {
-	funds := GetUserFund(user)
+func CheckMyRepeatStock(user string) (map[string]*UserStock, error) {
+	funds, err := GetUserFund(user)
+	if err != nil {
+		return nil, err
+	}
 	sqldb, _ := tool.GetConn()
 	holdStockMap := make(map[string]*UserStock)
 
@@ -61,7 +67,7 @@ func CheckMyRepeatStock(user string) map[string]*UserStock {
 			}
 		}
 	}
-	return holdStockMap
+	return holdStockMap, nil
 }
 
 type UserStock struct {
@@ -69,7 +75,7 @@ type UserStock struct {
 	HoldFundCount int `json:"holdFundcCount"`
 }
 
-func AddUserFund(user string, fund string) string {
+func AddUserFund(user string, fund string) (string, error) {
 	fundExist := CheckFundExist(fund)
 	if !fundExist {
 		InsertFund(fund)
@@ -82,7 +88,7 @@ func AddUserFund(user string, fund string) string {
 	if userCount == 0 {
 		sqldb.Debug().Create(&UserFund{UserId: userid, FundId: fundid})
 	}
-	return "ok"
+	return "add fund success", nil
 }
 
 func getUserId(name string) int {
@@ -92,10 +98,13 @@ func getUserId(name string) int {
 	return int(user.ID)
 }
 
-func DeleteUserFund(username string, fundid string) string {
+func DeleteUserFund(username string, fundid string) (string, error) {
 	sqldb, _ := tool.GetConn()
-	sqldb.Debug().Where("user_id = ? AND fund_id = ?", getUserId(username), getFundId(fundid)).Delete(&UserFund{})
-	return "ok"
+	res := sqldb.Debug().Where("user_id = ? AND fund_id = ?", getUserId(username), getFundId(fundid)).Delete(&UserFund{})
+	if res.Error != nil {
+		return "", res.Error
+	}
+	return "delete success", nil
 }
 
 type UserFund struct {

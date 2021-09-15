@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
+	"selFund/app"
 	se "selFund/service"
 )
 
@@ -21,43 +22,81 @@ type UserInfo struct {
 }
 
 func AddUser(c *gin.Context) {
+	appG := app.Gin{C: c}
 	var json UserInfo
 	if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		appG.ResponseError("PARA_ANALYSIS_ERROR", err)
 		return
 	}
-	c.JSON(http.StatusOK, se.AddUser(json.User, json.Desc))
+	msg, err := se.AddUser(json.User, json.Desc)
+	if err != nil {
+		appG.ResponseError("DATA_INSERT_ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(map[string]interface{}{
+		"msg": msg,
+	})
 }
 
 func GetUserFund(c *gin.Context) {
+	appG := app.Gin{C: c}
 	username := c.Param("username")
-	c.JSON(http.StatusOK, se.CheckMyRepeatStock(username))
+	res, err := se.GetUserFund(username)
+	if err != nil {
+		appG.ResponseError("ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(res)
 }
 
 func CheckRepeatStock(c *gin.Context) {
+	appG := app.Gin{C: c}
 	username := c.Param("username")
-	c.JSON(http.StatusOK, se.CheckMyRepeatStock(username))
+	res, err := se.CheckMyRepeatStock(username)
+	if err != nil {
+		appG.ResponseError("ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(res)
 }
 
 func AddUserFund(c *gin.Context) {
+	appG := app.Gin{C: c}
 	var json UserFund
 	if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, se.AddUserFund(json.User, json.Fund))
+	res, err := se.AddUserFund(json.User, json.Fund)
+	if err != nil {
+		appG.ResponseError("ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(res)
 }
 
 func DeleteUserFund(c *gin.Context) {
+	appG := app.Gin{C: c}
 	var json UserFund
 	if err := c.ShouldBindBodyWith(&json, binding.JSON); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, se.DeleteUserFund(json.User, json.Fund))
+	res, err := se.DeleteUserFund(json.User, json.Fund)
+	if err != nil {
+		appG.ResponseError("ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(res)
 }
 
 func GetFund(c *gin.Context) {
+	appG := app.Gin{C: c}
 	fund := c.Param("fund")
-	c.JSON(http.StatusOK, se.GetFund(fund))
+	res, err := se.GetFund(fund)
+	if err != nil {
+		appG.ResponseError("ERROR", err)
+		return
+	}
+	appG.ResponseSuccess(res)
 }

@@ -34,11 +34,11 @@ func getFundPosition(url string) (Position, error) {
 	return tmp, nil
 }
 
-func InsertFund(fundCode string) (FundVO, error) {
+func InsertFund(fundCode string) (string, error) {
 	pos, err := getFundPosition("https://api.doctorxiong.club/v1/fund/position?code=" + fundCode)
 	db, _ := tool.GetConn()
 	if err != nil || pos.Code != 200 {
-		return FundVO{}, err
+		return "", err
 	}
 	var fund = Fund{Name: pos.Data.Title, Code: fundCode, Bond: pos.Data.Bond, Cash: pos.Data.Cash, Stock: pos.Data.Stock, Title: pos.Data.Title, Total: pos.Data.Total}
 	db.Debug().Create(&fund)
@@ -46,7 +46,7 @@ func InsertFund(fundCode string) (FundVO, error) {
 		var holdStock = HoldStock{FundCode: fundCode, StockCode: v[0], Name: v[1], Precent: v[2], Hold: v[3], HoldAmount: v[4]}
 		db.Debug().Create(&holdStock)
 	}
-	return GetFund(fundCode), nil
+	return "insert success", nil
 }
 
 func CheckFundExist(fundCode string) bool {
@@ -57,7 +57,7 @@ func CheckFundExist(fundCode string) bool {
 	return count != 0
 }
 
-func GetFund(fundCode string) FundVO {
+func GetFund(fundCode string) (FundVO, error) {
 	db, _ := tool.GetConn()
 
 	if !CheckFundExist(fundCode) {
@@ -66,11 +66,15 @@ func GetFund(fundCode string) FundVO {
 	}
 	var fundVO FundVO
 	db.Debug().Model(&Fund{}).Where(&Fund{Code: fundCode}).First(&fundVO)
-	fundVO.StockList = GetFundStocks(fundCode)
-	return fundVO
+	stockList, err := GetFundStocks(fundCode)
+	if err != nil {
+		return FundVO{}, err
+	}
+	fundVO.StockList = stockList
+	return fundVO, nil
 }
 
-func GetFundStocks(fundCode string) []StockVO {
+func GetFundStocks(fundCode string) ([]StockVO, error) {
 	if !CheckFundExist(fundCode) {
 		fmt.Println("need insert fund!")
 		InsertFund(fundCode)
@@ -78,7 +82,7 @@ func GetFundStocks(fundCode string) []StockVO {
 	db, _ := tool.GetConn()
 	var holdStocks []StockVO
 	db.Debug().Model(&HoldStock{}).Where(&HoldStock{FundCode: fundCode}).Find(&holdStocks)
-	return holdStocks
+	return holdStocks, nil
 }
 
 func getFundId(fundCode string) int {
