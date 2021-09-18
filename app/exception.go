@@ -10,12 +10,6 @@ type Gin struct {
 	C *gin.Context
 }
 
-type Response struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
-
 // Response setting gin.JSON
 func (g *Gin) ResponseError(errorMsg string, data interface{}) {
 	g.C.JSON(http.StatusInternalServerError, Response{

@@ -16,3 +16,13 @@ func GetMsg(errMsg string) string {
 
 	return MsgFlags[errMsg]
 }
+
+type Response struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+func (*Response) Error() string {
+	return "new error response"
+}
